@@ -8,7 +8,7 @@
 
 jslisten set "-9 mupen64plus"
 
-#Emulation Station Features
+# Emulation Station Features
 GAME=$(echo "${1}"| sed "s#^/.*/##")
 ASPECT=$(get_setting game_aspect_ratio n64 "${GAME}")
 IRES=$(get_setting internal_resolution n64 "${GAME}")
@@ -42,7 +42,7 @@ mkdir -p $TMP
 # Unzip or copy the rom to the working directory
 if [ $(echo $1 | grep -i .zip | wc -l) -eq 1 ]; then
 	#unpack the zip file
-  	unzip -q -o "$1" -d $TMP
+	unzip -q -o "$1" -d $TMP
 	ROM=$(unzip -Zl -1 "$1")
 else
 	cp "$1" $TMP
@@ -52,71 +52,70 @@ fi
 cp $M64PCONF $TMP
 SET_PARAMS="--set Core[SharedDataPath]=$TMP --set Video-Rice[ResolutionWidth]=${SCREENWIDTH}"
 
-#Set the cores to use
+# Set the cores to use
 CORES=$(get_setting "cores" "${PLATFORM}" "${ROMNAME##*/}")
 if [ "${CORES}" = "little" ]
 then
-  EMUPERF="${SLOW_CORES}"
+	EMUPERF="${SLOW_CORES}"
 elif [ "${CORES}" = "big" ]
 then
-  EMUPERF="${FAST_CORES}"
+	EMUPERF="${FAST_CORES}"
 else
-  ### All..
-  unset EMUPERF
+	### All..
+	unset EMUPERF
 fi
 
-#Aspect Ratio
-	if [ "${ASPECT}" = "fullscreen" ]; then
-		# TODO: Set aspect ratio to fullscreen
-		SET_PARAMS="$SET_PARAMS --set Video-General[ScreenWidth]=${SCREENWIDTH} --set Video-General[ScreenHeight]=${SCREENHEIGHT} --set Video-Parallel[ScreenWidth]=${SCREENWIDTH} --set Video-Parallel[ScreenHeight]=${SCREENHEIGHT} --set Video-Glide64mk2[aspect]=2 --set Video-GLideN64[AspectRatio]=3 --set Video-Parallel[WidescreenStretch]=False"
-	else
-		# TODO: Set aspect ratio to 4:3
-		if [ "${VPLUGIN}" = "rice" ]; then
-			GAMEWIDTH=$(((SCREENHEIGHT * 4) / 3))
-			SET_PARAMS="$SET_PARAMS --set Video-General[ScreenWidth]=${GAMEWIDTH} --set Video-General[ScreenHeight]=${SCREENHEIGHT}"
-		else
-			SET_PARAMS="$SET_PARAMS --set Video-General[ScreenWidth]=${SCREENWIDTH} --set Video-General[ScreenHeight]=${SCREENHEIGHT} --set Video-Parallel[ScreenWidth]=${SCREENWIDTH} --set Video-Parallel[ScreenHeight]=${SCREENHEIGHT} --set Video-Parallel[WidescreenStretch]=False --set Video-Glide64mk2[aspect]=0 --set Video-GLideN64[AspectRatio]=1"
-		fi
-	fi
+# Aspect Ratio
+if [ "${ASPECT}" = "fullscreen" ]; then
+    # TODO: Set aspect ratio to fullscreen
+    SET_PARAMS="$SET_PARAMS --set Video-General[ScreenWidth]=${SCREENWIDTH} --set Video-General[ScreenHeight]=${SCREENHEIGHT} --set Video-Parallel[ScreenWidth]=${SCREENWIDTH} --set Video-Parallel[ScreenHeight]=${SCREENHEIGHT} --set Video-Glide64mk2[aspect]=2 --set Video-GLideN64[AspectRatio]=3 --set Video-Parallel[WidescreenStretch]=False"
+else
+    # TODO: Set aspect ratio to 4:3
+    if [ "${VPLUGIN}" = "rice" ]; then
+        GAMEWIDTH=$(((SCREENHEIGHT * 4) / 3))
+        SET_PARAMS="$SET_PARAMS --set Video-General[ScreenWidth]=${GAMEWIDTH} --set Video-General[ScreenHeight]=${SCREENHEIGHT}"
+    else
+        SET_PARAMS="$SET_PARAMS --set Video-General[ScreenWidth]=${SCREENWIDTH} --set Video-General[ScreenHeight]=${SCREENHEIGHT} --set Video-Parallel[ScreenWidth]=${SCREENWIDTH} --set Video-Parallel[ScreenHeight]=${SCREENHEIGHT} --set Video-Parallel[WidescreenStretch]=False --set Video-Glide64mk2[aspect]=0 --set Video-GLideN64[AspectRatio]=1"
+    fi
+fi
 
 # Native Res Factor (Upscaling)
-	if [ "${VPLUGIN}" = "gliden64" ]; then
-		sed -i "/UseNativeResolutionFactor/c\UseNativeResolutionFactor = $IRES" $TMP/mupen64plus.cfg
-	elif [ "${VPLUGIN}" = "rmg_parallel" ]; then
-		sed -i "/Upscaling/c\Upscaling = $IRES" $TMP/mupen64plus.cfg
-	fi
-
+if [ "${VPLUGIN}" = "gliden64" ]; then
+    sed -i "/UseNativeResolutionFactor/c\UseNativeResolutionFactor = $IRES" $TMP/mupen64plus.cfg
+elif [ "${VPLUGIN}" = "rmg_parallel" ]; then
+    sed -i "/Upscaling/c\Upscaling = $IRES" $TMP/mupen64plus.cfg
+fi
 
 # Input Config
-	if [ "${CON}" = "custom" ]; then
-		cp $GAMEDATA/custominput.ini $TMP/InputAutoCfg.ini
-	elif [ "${CON}" = "standard" ]; then
-                cp $SHARE/default.ini $TMP/InputAutoCfg.ini
-	else
-		cp $SHARE/default.ini $TMP/InputAutoCfg.ini
-	fi
+if [ "${CON}" = "custom" ]; then
+    cp $GAMEDATA/custominput.ini $TMP/InputAutoCfg.ini
+elif [ "${CON}" = "standard" ]; then
+    cp $SHARE/default.ini $TMP/InputAutoCfg.ini
+else
+    cp $SHARE/default.ini $TMP/InputAutoCfg.ini
+fi
 
 # Controller Pak
-	sed -i "0,/plugin =/c\plugin = $PAK" $TMP/mupen64plus.cfg
+sed -i "0,/plugin =/c\plugin = $PAK" $TMP/mupen64plus.cfg
 
 # Show FPS
 # Get configuration from system.cfg
-	if [ "${FPS}" = "true" ]; then
-		export LIBGL_SHOW_FPS="1"
-		export GALLIUM_HUD="cpu+GPU-load+fps"
-		# sed -i '/ShowFPS = (False|True)/c\ShowFPS = True' $TMP/mupen64plus.cfg
-		# sed -i '/ShowFPS = (0|1)/c\ShowFPS = 1' $TMP/mupen64plus.cfg
-		# sed -i '/show_fps/c\show_fps = 1' $TMP/mupen64plus.cfg
-	else
-		export LIBGL_SHOW_FPS="0"
-		export GALLIUM_HUD="off"
-		# sed -i '/ShowFPS = (False|True)/c\ShowFPS = False' $TMP/mupen64plus.cfg
-		# sed -i '/ShowFPS = (0|1)/c\ShowFPS = 0' $TMP/mupen64plus.cfg
-		# sed -i '/show_fps/c\show_fps = 0' $TMP/mupen64plus.cfg
-	fi
+if [ "${FPS}" = "true" ]; then
+    export LIBGL_SHOW_FPS="1"
+    export GALLIUM_HUD="cpu+GPU-load+fps"
+    # sed -i '/ShowFPS = (False|True)/c\ShowFPS = True' $TMP/mupen64plus.cfg
+    # sed -i '/ShowFPS = (0|1)/c\ShowFPS = 1' $TMP/mupen64plus.cfg
+    # sed -i '/show_fps/c\show_fps = 1' $TMP/mupen64plus.cfg
+else
+    export LIBGL_SHOW_FPS="0"
+    export GALLIUM_HUD="off"
+    # sed -i '/ShowFPS = (False|True)/c\ShowFPS = False' $TMP/mupen64plus.cfg
+    # sed -i '/ShowFPS = (0|1)/c\ShowFPS = 0' $TMP/mupen64plus.cfg
+    # sed -i '/show_fps/c\show_fps = 0' $TMP/mupen64plus.cfg
+fi
 
 # SIMPLECORE, decide which executable to use for simple64
- if [ "${SIMPLECORE}" = "simple" ]; then
+if [ "${SIMPLECORE}" = "simple" ]; then
 	SIMPLESUFFIX="-simple"
 	SET_PARAMS="$SET_PARAMS --set Core[R4300Emulator]=1"
 else
@@ -153,8 +152,8 @@ case "${RSP}" in
 		SET_PARAMS="$SET_PARAMS --rsp mupen64plus-rsp-hle$SIMPLESUFFIX.so"
 	;;
 	*)
-    	SET_PARAMS="$SET_PARAMS --rsp mupen64plus-rsp-cxd4$SIMPLESUFFIX.so"
-  	;;
+		SET_PARAMS="$SET_PARAMS --rsp mupen64plus-rsp-cxd4$SIMPLESUFFIX.so"
+	;;
 esac
 
 # Set the remaining plugins
